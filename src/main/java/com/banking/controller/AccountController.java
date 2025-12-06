@@ -1,6 +1,7 @@
 package com.banking.controller;
 
 import com.banking.dto.AccountDto;
+import com.banking.dto.TransferFundDto;
 import com.banking.entity.Account;
 import com.banking.service.AccountService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,6 +60,12 @@ public class AccountController {
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteAccount(@PathVariable Long id){
         return ResponseEntity.ok(accountService.deleteAccount(id));
+    }
+
+    @PostMapping("/transfer")
+    public ResponseEntity<String> transferFunds(@RequestBody TransferFundDto transferFundDto){
+        accountService.transferFunds(transferFundDto);
+        return ResponseEntity.ok("Transfer fund successfully");
     }
 
 

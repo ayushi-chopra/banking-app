@@ -1,6 +1,7 @@
 package com.banking.service.impl;
 
 import com.banking.dto.AccountDto;
+import com.banking.dto.TransferFundDto;
 import com.banking.entity.Account;
 import com.banking.exception.ResourceNotFoundException;
 import com.banking.repository.AccountRepository;
@@ -9,7 +10,6 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -90,4 +90,21 @@ public class AccountServiceImpl implements AccountService {
         accountRepository.delete(account);
         return "Account deleted successfully";
     }
+
+    @Override
+    public void transferFunds(TransferFundDto transferFundDto) {
+        Account sender = accountRepository.findById(transferFundDto.senderAccountId()).
+                orElseThrow(() -> new ResourceNotFoundException("senders Id does not exist"));
+        Account reciever = accountRepository.findById(transferFundDto.receiverAccountId()).
+                orElseThrow(()->new ResourceNotFoundException("Receivers id does not exists"));
+        if(sender.getBalance()!=null && sender.getBalance()>transferFundDto.balance()){
+            sender.setBalance(sender.getBalance()-transferFundDto.balance());
+            accountRepository.save(sender);
+            reciever.setBalance(reciever.getBalance()+transferFundDto.balance());
+            accountRepository.save(reciever);
+        }else{
+            throw new RuntimeException("Insufficient balance to send");
+        }
+    }
+
 }
