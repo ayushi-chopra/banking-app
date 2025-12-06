@@ -1,15 +1,20 @@
 package com.banking.service.impl;
 
+import com.banking.constant.TransactionType;
 import com.banking.dto.AccountDto;
+import com.banking.dto.TransactionDto;
 import com.banking.dto.TransferFundDto;
 import com.banking.entity.Account;
+import com.banking.entity.Transaction;
 import com.banking.exception.ResourceNotFoundException;
 import com.banking.repository.AccountRepository;
+import com.banking.repository.TransactionRepository;
 import com.banking.service.AccountService;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -18,10 +23,13 @@ import java.util.stream.Collectors;
 public class AccountServiceImpl implements AccountService {
 
     private AccountRepository accountRepository;
+    private TransactionRepository transactionRepository;
 
     @Autowired
-    public AccountServiceImpl (AccountRepository accountRepository){
+    public AccountServiceImpl (AccountRepository accountRepository,
+                               TransactionRepository transactionRepository){
         this.accountRepository=accountRepository;
+        this.transactionRepository=transactionRepository;
     }
 
     @Autowired
@@ -32,6 +40,12 @@ public class AccountServiceImpl implements AccountService {
         Account account= mapper.map(accountDto, Account.class);
         Account savedAccount= accountRepository.save(account);
         AccountDto accountDto1=mapper.map(savedAccount,AccountDto.class);
+        Transaction transaction=new Transaction();
+        transaction.setAccountId(savedAccount.getId());
+        transaction.setAmount(accountDto1.getBalance());
+        transaction.setTransactionType(TransactionType.DEPOSIT);
+        transaction.setLocalDateTime(LocalDateTime.now());
+        transactionRepository.save(transaction);
         return accountDto1;
     }
 
@@ -50,6 +64,12 @@ public class AccountServiceImpl implements AccountService {
         Double total =currentBalance+amount;
         account.setBalance(total);
         Account savedAccount = accountRepository.save(account);
+        Transaction transaction=new Transaction();
+        transaction.setAccountId(id);
+        transaction.setAmount(amount);
+        transaction.setTransactionType(TransactionType.DEPOSIT);
+        transaction.setLocalDateTime(LocalDateTime.now());
+        transactionRepository.save(transaction);
         return mapper.map(savedAccount,AccountDto.class);
     }
 
@@ -64,6 +84,12 @@ public class AccountServiceImpl implements AccountService {
         Double leftAmount=currentBalance-amount;
         account.setBalance(leftAmount);
         Account saved = accountRepository.save(account);
+        Transaction transaction=new Transaction();
+        transaction.setAccountId(id);
+        transaction.setAmount(amount);
+        transaction.setTransactionType(TransactionType.WITHDRAW);
+        transaction.setLocalDateTime(LocalDateTime.now());
+        transactionRepository.save(transaction);
         return mapper.map(saved,AccountDto.class);
     }
 
@@ -93,18 +119,39 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public void transferFunds(TransferFundDto transferFundDto) {
-        Account sender = accountRepository.findById(transferFundDto.senderAccountId()).
+        Account sender = accountRepository.findById(transferFundDto.getSenderAccountId()).
                 orElseThrow(() -> new ResourceNotFoundException("senders Id does not exist"));
-        Account reciever = accountRepository.findById(transferFundDto.receiverAccountId()).
+        Account reciever = accountRepository.findById(transferFundDto.getReceiverAccountId()).
                 orElseThrow(()->new ResourceNotFoundException("Receivers id does not exists"));
-        if(sender.getBalance()!=null && sender.getBalance()>transferFundDto.balance()){
-            sender.setBalance(sender.getBalance()-transferFundDto.balance());
+        if(sender.getBalance()!=null && sender.getBalance()>transferFundDto.getAmount()){
+            sender.setBalance(sender.getBalance()-transferFundDto.getAmount());
             accountRepository.save(sender);
-            reciever.setBalance(reciever.getBalance()+transferFundDto.balance());
+            reciever.setBalance(reciever.getBalance()+transferFundDto.getAmount());
             accountRepository.save(reciever);
         }else{
             throw new RuntimeException("Insufficient balance to send");
         }
+        Transaction transactionSent=new Transaction();
+        transactionSent.setAccountId(sender.getId());
+        transactionSent.setAmount(transferFundDto.getAmount());
+        transactionSent.setTransactionType(TransactionType.TRANSFER_SENT);
+        transactionSent.setLocalDateTime(LocalDateTime.now());
+        transactionRepository.save(transactionSent);
+
+        Transaction transactionReceived=new Transaction();
+        transactionReceived.setAccountId(reciever.getId());
+        transactionReceived.setAmount(transferFundDto.getAmount());
+        transactionReceived.setTransactionType(TransactionType.TRANSFER_RECEIVED);
+        transactionReceived.setLocalDateTime(LocalDateTime.now());
+        transactionRepository.save(transactionReceived);
+    }
+
+    @Override
+    public List<TransactionDto> getAllTransactions(Long accountId) {
+        List<Transaction> transactions = transactionRepository.
+                findByAccountIdOrderByLocalDateTimeDesc(accountId);
+        List<TransactionDto> transactionDtos = transactions.stream().map(t -> mapper.map(t, TransactionDto.class)).collect(Collectors.toList());
+        return transactionDtos;
     }
 
 }

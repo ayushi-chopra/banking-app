@@ -1,6 +1,7 @@
 package com.banking.service;
 
 import com.banking.dto.AccountDto;
+import com.banking.dto.TransactionDto;
 import com.banking.dto.TransferFundDto;
 
 import java.util.List;
@@ -14,4 +15,5 @@ public interface AccountService {
     List<AccountDto> getAllAccounts();
     String deleteAccount(Long id);
     void transferFunds(TransferFundDto transferFundDto);
+    List<TransactionDto> getAllTransactions(Long accountId);
 }

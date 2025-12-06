@@ -1,6 +1,7 @@
 package com.banking.controller;
 
 import com.banking.dto.AccountDto;
+import com.banking.dto.TransactionDto;
 import com.banking.dto.TransferFundDto;
 import com.banking.entity.Account;
 import com.banking.service.AccountService;
@@ -66,6 +67,11 @@ public class AccountController {
     public ResponseEntity<String> transferFunds(@RequestBody TransferFundDto transferFundDto){
         accountService.transferFunds(transferFundDto);
         return ResponseEntity.ok("Transfer fund successfully");
+    }
+
+    @GetMapping("transaction/{id}")
+    public ResponseEntity<List<TransactionDto>> getAllTransactions(@PathVariable("id") Long accountId){
+        return ResponseEntity.ok(accountService.getAllTransactions(accountId));
     }
 
 
